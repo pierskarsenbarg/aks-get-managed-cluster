@@ -1,5 +1,6 @@
 """An Azure RM Python Pulumi program"""
 
+import pulumi
 from pulumi import ResourceOptions, Output, Config, export
 from typing import Mapping, Any
 from pulumi_azure_native import resources, network, managedidentity, authorization, containerservice
@@ -102,11 +103,19 @@ cluster = containerservice.ManagedCluster(
             sku=containerservicev20230102preview.ManagedClusterSKUArgs(name="Base", tier="Standard")
         )
 
-aks_cluster_properties = Output.all(resource_group.name, cluster.name).apply(
-        lambda args: containerservice.get_managed_cluster(
-            resource_group_name=args[0],
-            resource_name=args[1],
-        )
+aks_cluster_properties = pulumi.Output.all(resource_group.name, cluster.name).apply(
+        lambda args: get_managed_cluster(args[0], args[1])
     )
+
+def get_managed_cluster(resource_group_name, resource_name):
+    pulumi.log.info("Getting managed cluster information")
+    cluster_properties = containerservice.get_managed_cluster(
+        resource_group_name=resource_group_name,
+        resource_name=resource_name,
+    )
+    pulumi.log.info("Got managed cluster information")
+    return cluster_properties
+
+
 
 export("oidc", aks_cluster_properties.oidc_issuer_profile.issuer_url)
